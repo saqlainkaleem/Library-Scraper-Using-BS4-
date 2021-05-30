@@ -754,14 +754,14 @@ class WindowFrame(wx.Frame):
         self.Centre(direction=wx.BOTH)
         self.SetIcon(wx.Icon(r'.\\Resources\\Icons\\temperature.png'))
 
-        # self.main_panel = MainPanel(self, self.on_main_panel_click)
-        # self.logo_panel = LogoPanel(self, self.on_logo_panel_click)
-        # self.d1_panel = DetailPanel1(self, self.on_d1_panel_click)
-        # self.d2_panel = DetailPanel2(self, self.on_d2_panel_click)
-        # self.article_panel = ArticlePanel(self, self.article_on_click)
-        #
-        # self.panel_switch = PanelSwitcher(self, [self.main_panel, self.logo_panel,
-        #                                          self.d1_panel,self.d2_panel, self.article_panel])
+        self.main_panel = MainPanel(self, self.on_main_panel_click)
+        self.logo_panel = LogoPanel(self, self.on_logo_panel_click)
+        self.d1_panel = DetailPanel1(self, self.on_d1_panel_click)
+        self.d2_panel = DetailPanel2(self, self.on_d2_panel_click)
+        self.article_panel = ArticlePanel(self, self.article_on_click)
+        
+        self.panel_switch = PanelSwitcher(self, [self.main_panel, self.logo_panel,
+                                                 self.d1_panel,self.d2_panel, self.article_panel])
 
         self.obj = ShareFrame("My Share Snorkeling", self)
 
@@ -788,43 +788,36 @@ class WindowFrame(wx.Frame):
         self.menubar.Append(self.setting, "Settings")
         self.SetMenuBar(self.menubar)
 
-    # def on_main_panel_click(self, event):
-    #     arg = event.GetEventObject().GetLabel()
-    #     if "mostpopular" in arg:
-    #         self.panel_switch.Hide(self.main_panel)
-    #         self.panel_switch.Show(self.d1_panel)
-    #         self.d1_panel.scrape_detail(arg)
-    #     else:
-    #         print("Here")
-    #         arg = event.GetEventObject().GetValue()
-    #         arg = "https://1lib.in/s/" + arg
-    #         print("Url_accessing: " + arg)
-    #         self.panel_switch.Hide(self.d1_panel)
-    #         self.d2_panel.list_scrape(arg)
-    #         self.panel_switch.Show(self.d2_panel)
-    #
-    # def on_logo_panel_click(self):
-    #     pass
-    #
-    # def on_d1_panel_click(self, event):
-    #     if "mostpopular" in event.GetEventObject().GetLabel():
-    #         self.panel_switch.Hide(self.d1_panel)
-    #         self.d1_panel.scrape_detail(event.GetEventObject().GetLabel())
-    #         self.panel_switch.Show(self.d1_panel)
-    #     else:
-    #         pass
-    #
-    # def on_d2_panel_click(self, event):
-    #     self.args = event.GetEventObject().GetLabel()
-    #     self.obj.scrape_detail(self.args)
-    #     self.obj.Show()
-    #
-    # def article_on_click(self):
-    #     pass
-    #
-    # def on_detail_click(self, event):
-    #     pass
-
+    def on_main_panel_click(self, event):
+        arg = event.GetEventObject().GetLabel()
+        if "mostpopular" in arg:
+            self.panel_switch.Hide(self.main_panel)
+            self.panel_switch.Show(self.d1_panel)
+            self.d1_panel.scrape_detail(arg)
+        else:
+            print("Here")
+            arg = event.GetEventObject().GetValue()
+            arg = "https://1lib.in/s/" + arg
+            print("Url_accessing: " + arg)
+            self.panel_switch.Hide(self.d1_panel)
+            self.d2_panel.list_scrape(arg)
+            self.panel_switch.Show(self.d2_panel)
+    
+    def on_logo_panel_click(self):
+        pass
+    
+    def on_d1_panel_click(self, event):
+        if "mostpopular" in event.GetEventObject().GetLabel():
+            self.panel_switch.Hide(self.d1_panel)
+            self.d1_panel.scrape_detail(event.GetEventObject().GetLabel())
+            self.panel_switch.Show(self.d1_panel)
+        else:
+            pass
+    
+    def on_d2_panel_click(self, event):
+        self.args = event.GetEventObject().GetLabel()
+        self.obj.scrape_detail(self.args)
+        self.obj.Show()
 
 
 
