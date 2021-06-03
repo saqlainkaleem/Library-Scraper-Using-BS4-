@@ -49,20 +49,7 @@
   
 - GUI is quite naive.
   
-- many functions and Interface elements doesn't work. of if does, in a strange way.
-  
 - Static sizing of the Interface sometimes pose a problem when the frame is resized.
-  
-
-## Bugs Added:
-
-- The search button after the search box doesn't work.
-  
-- The description of books sometimes are not extracted due to thier tag bindings.
-  
-- Some True typeface fonts are not rendering.
-  
-- Next and previous buttons after the search box after searching is done updates the data but can't render it on the UI. Resizing is done to show it.
   
 
 ##### Requirements:
