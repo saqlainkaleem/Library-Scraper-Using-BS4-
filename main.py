@@ -1,7 +1,7 @@
 # Z library
 import wx
 from wx.lib import scrolledpanel
-from PIL import Image
+import webbrowser
 import io
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
@@ -10,6 +10,7 @@ import win32gui
 
 
 class PanelBase(wx.Panel):
+    '''Base Panel class for all panels'''
     def __init__(self, parent, label, on_click):
         super(PanelBase, self).__init__(parent, id=-1)
         self.parent_frame = parent
@@ -24,7 +25,7 @@ class MainPanel(PanelBase):
         self.Main_UI()
 
     def Main_UI(self):
-        # init contents
+        ''' Create the UI on start '''
         self.font1 = wx.Font(15, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Times New Roman')
         self.main_panel_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_panel_sizer)
@@ -53,7 +54,7 @@ class MainPanel(PanelBase):
         self.recom_panel.SetupScrolling()
         self.recom_panel.SetSizer(self.recom_sizer)
 
-        # initialize scraping
+        # initialize scraping and save the page for later use
         self.url = "https://1lib.in/"
         hdr = {'User-Agent': 'Mozilla/5.0'}
         req = Request(self.url, headers=hdr)
@@ -64,6 +65,7 @@ class MainPanel(PanelBase):
 
         self.logo = wx.BitmapButton(self.search_panel, id=-1, bitmap=wx.Bitmap(self.logo_image), size=(230, 100),
                                     pos=(50, 0))
+        self.logo.SetToolTip(wx.ToolTip("Z-Library"))
         self.search_sub_sizer_1.Add(self.logo, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 25)
 
         self.search_box = wx.TextCtrl(self.search_panel, id=-1, value="", size=(300, 25),
@@ -72,19 +74,13 @@ class MainPanel(PanelBase):
         self.search_box.Bind(wx.EVT_TEXT_ENTER, self.on_click)
         self.search_sub_sizer_2.Add(self.search_box, 0, wx.ALIGN_CENTER_VERTICAL)
 
-        self.search_logo = wx.Image(r'.\\Resources\\icons\\search-logo.png')
-        self.search_logo = self.search_logo.Rescale(width=35, height=35, quality=wx.IMAGE_QUALITY_NORMAL)
-        self.search_button = wx.BitmapButton(self.search_panel, id=-1, bitmap=wx.Bitmap(self.search_logo),
-                                             size=(35, 35))
-        self.search_button.Bind(wx.EVT_BUTTON, self.on_click)
-        self.search_sub_sizer_2.Add(self.search_button, 0, wx.ALIGN_CENTER_VERTICAL)
-
         self.main_panel_sizer.Add(self.search_panel, 0, wx.ALL)
         self.main_panel_sizer.Add(self.recom_panel, 0, wx.ALL)
 
         self.recom_UI()
 
     def recom_UI(self):
+        '''creates the GUI holder for the recommended books in advance'''
         self.recom_list = [None] * 20
         self.def_image = wx.Image(r".\\Resources\\icons\\book-icon.png")
 
@@ -97,10 +93,10 @@ class MainPanel(PanelBase):
         self.recom_panel.Show()
         self.scrape_recom()
 
-    def request_filled(self):
-        print("Class passed")
-
     def scrape_recom(self):
+        ''' Called just after the holder is created, this
+         function now will scrape the data and insert it in book holders'''
+
         self.containers = self.page_soup.find_all('div', class_='brick checkBookDownloaded')
         print(len(self.containers))
         x = 0
@@ -124,6 +120,9 @@ class LogoPanel(PanelBase):
 
 
 class DetailPanel1(PanelBase):
+    '''
+    Panel class if a book is selected from the main page recommendations
+    '''
     def __init__(self, parent, on_click):
         super(DetailPanel1, self).__init__(parent, 'DetailPanel1', on_click)
         self.width, self.height = 704, 421
@@ -176,7 +175,7 @@ class DetailPanel1(PanelBase):
         self.book_detail_sizer_1 = wx.BoxSizer(wx.HORIZONTAL)
         self.book_detail_sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
 
-        # book  details scraped
+        # objects created to hold the book details scraped from the site
         self.book_name = wx.StaticText(self.book_detail_panel, id=-1, label="Book")
         self.book_name.SetFont(self.font2)
         self.book_isbn = wx.StaticText(self.book_detail_panel, id=-1, label="ISBN: ")
@@ -216,7 +215,10 @@ class DetailPanel1(PanelBase):
         self.index_panel.SetSizer(self.main_list_sizer)
 
     def scrape_detail(self, url):
-        # init contents
+        '''
+        Function to be called when the user selects a book from the main page,
+        and the whole GUI for the detail page is ready to hold it.
+        '''
         self.url_passed = url
 
         # initialize scraping
@@ -340,13 +342,16 @@ class DetailPanel1(PanelBase):
         self.book_description.SetValue (self.b_descrip)
 
         self.detail_panel.Layout()
-
-
         self.onmainpanelclick()
 
 
     def onmainpanelclick(self):
+        '''
+        This function can be called over and over again as the recommendations are accessed
+        :return:
+        '''
 
+        # checks the scrolled panel sizer if it has any children from past and removes it
         self.children = self.main_list_sizer.GetChildren()
 
         i = len(self.children)-1
@@ -379,19 +384,25 @@ class DetailPanel1(PanelBase):
             self.main_list_sizer.Add(self.button_spec_1[i])
             self.button_spec_1[i].SetToolTip(wx.ToolTip(container.a['title']))
             i += 1
+            self.main_list_sizer.Layout()
 
-        self.index_panel.SetupScrolling()
         self.index_panel.Bind(wx.EVT_MOTION, self.OnMouse)
-        self.index_panel.Layout()
-        self.Layout()
+        self.index_panel.SetupScrolling()
+        self.main_list_sizer.Layout()
+        self.main_scrape_UI_sizer.Layout()
+
 
     def OnMouse(self, event):
         self.index_panel.SetFocus()
 
 
 class DetailPanel2(PanelBase):
+    '''
+    This panel is responsible to show the results from search
+    '''
     def __init__(self, parent, on_click):
         super(DetailPanel2, self).__init__(parent, 'DetailPanel2', on_click)
+        self.parent_frame = parent
         self.width, self.height = 704, 421
         self.on_click = on_click
         self.font1 = wx.Font(10, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Calibri')
@@ -399,8 +410,6 @@ class DetailPanel2(PanelBase):
 
         self.go_img = wx.Image(r".\\Resources\\icons\\go_to.png")
         self.go_img = self.go_img.Rescale(width=28, height=28, quality=wx.IMAGE_QUALITY_HIGH)
-        self.next_node = wx.Image(r".\\Resources\\icons\\drop_down.png")
-        self.next_node = self.next_node.Rescale(width=16, height=16, quality=wx.IMAGE_QUALITY_HIGH)
 
         self.next_page = wx.Image(r".\\Resources\\icons\\next.png")
         self.next_page = self.next_page.Rescale(width=28, height=28, quality=wx.IMAGE_QUALITY_HIGH)
@@ -411,7 +420,6 @@ class DetailPanel2(PanelBase):
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_sizer)
 
-        self.bottom_panel_list = list()
         self.page_index = 1
         self.list_counter = 0
 
@@ -444,13 +452,18 @@ class DetailPanel2(PanelBase):
         self.main_sizer.Add(self.main_top_panel)
 
         # bottom panel
-        self.bottom_panel = wx.Panel(self, id=-1, size=(self.width, int(9 * self.height / 10)),
-                                     pos=(0, 9 * self.height / 10), style=wx.SIMPLE_BORDER)
-        self.bottom_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.bottom_panel.SetSizer(self.bottom_panel_sizer)
-        self.main_sizer.Add(self.bottom_panel)
+        self.buffer_panel = scrolledpanel.ScrolledPanel(self, id=-1,
+                                                        size=(self.width, int(9 * self.height / 10)),
+                                                        pos=(0, 9 * self.height / 10), style=wx.TAB_TRAVERSAL)
+        self.buffer_panel_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.buffer_panel.SetSizer(self.buffer_panel_sizer)
+
+        self.main_sizer.Add(self.buffer_panel)
 
     def on_list1(self, event):
+        '''
+        this function is responsible to edit the url when the user wants the next node list of the search result
+        '''
         self.page_index += 1
         self.list_counter += 1
         if "?page=" in self.search_box.GetValue():
@@ -458,17 +471,61 @@ class DetailPanel2(PanelBase):
         else:
             self.arg = "https://1lib.in/s/"+self.search_box.GetValue()+ "?page="+str(self.page_index)
 
-        self.bottom_panel_list[self.list_counter-1].Hide()
+        self.children = self.buffer_panel_sizer.GetChildren()
+
+        i = len(self.children) - 1
+
+        if len(self.children) != 0:
+            while i >= 0:
+                win = self.buffer_panel_sizer.GetItem(0).GetWindow()
+                print(win)
+                win.Destroy()
+                i -= 1
+                self.buffer_panel_sizer.Layout()
+        else:
+            print("Empty")
+
+        self.buffer_panel_sizer.Layout()
+        self.parent_frame.Fit()
+
         self.list_scrape(self.arg)
 
 
     def on_list2(self, event):
+        '''
+        this function is responsible to edit the url when the user wants the previous node list of the search result
+        '''
         self.page_index -= 1
-        self.arg = "https://1lib.in/s/" + self.search_box.GetValue() + "?page=" + str(self.page_index)
+        self.list_counter -= 1
+        if "?page=" in self.search_box.GetValue():
+            self.arg = "https://1lib.in/s/" + self.search_box.GetValue()[:-1] + str(self.page_index)
+        else:
+            self.arg = "https://1lib.in/s/" + self.search_box.GetValue() + "?page=" + str(self.page_index)
+
+        self.children = self.buffer_panel_sizer.GetChildren()
+
+        i = len(self.children) - 1
+
+        if len(self.children) != 0:
+            while i >= 0:
+                win = self.buffer_panel_sizer.GetItem(0).GetWindow()
+                print(win)
+                win.Destroy()
+                i -= 1
+        else:
+            print("Empty")
+
+        self.buffer_panel_sizer.Layout()
+        self.parent_frame.Fit()
+
         self.list_scrape(self.arg)
 
+
+
     def list_scrape(self, url):
-        # initialize scraping
+        '''
+        function to scrape the search results
+        '''
         self.url_pick = url
         hdr = {'User-Agent': 'Mozilla/5.0'}
         req = Request(self.url_pick, headers=hdr)
@@ -483,23 +540,13 @@ class DetailPanel2(PanelBase):
         self.search_box.SetValue(self.search_value[len(self.search_value) - 1])
 
         self.page_content = self.page_soup.find_all('td', {'style': 'vertical-align: top;'})
-        print(self.page_content)
         self.scrape_creation()
 
 
     def scrape_creation(self):
-
-        self.buffer_panel = scrolledpanel.ScrolledPanel(self.bottom_panel, id=-1,
-                                                        size=(self.width, int(9 * self.height / 10)),
-                                                        pos=(0, 9 * self.height / 10), style=wx.TAB_TRAVERSAL)
-        self.buffer_panel_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.buffer_panel.SetSizer(self.buffer_panel_sizer)
-
-        self.bottom_panel_list.append(self.buffer_panel)
-        self.bottom_panel_sizer.Add(self.buffer_panel)
-
-        self.node_list = list()
-
+        '''
+        function that inserts the result in the container UI
+        '''
 
         for i in range(len(self.page_content)):
             self.content_list = self.page_content[self.counter].find_all('a')
@@ -535,24 +582,118 @@ class DetailPanel2(PanelBase):
             self.sub_2_sizer.Add(self.go_to, 0, wx.LEFT, 20)
 
             self.buffer_panel_sizer.Add(self.buffer_low_panel, 0, flag=wx.TOP | wx.LEFT, border=5)
-            self.node_list.append(self.buffer_low_panel)
             self.counter += 1
-
-
+            self.buffer_panel_sizer.Layout()
         self.buffer_panel.SetupScrolling()
-        self.bottom_panel.Refresh()
-        self.bottom_panel.Update()
         self.buffer_panel.Show()
 
 
-
-
-class ArticlePanel(PanelBase):
+class MePanel(PanelBase):
+    '''
+    Class for displaying details of the project
+    '''
     def __init__(self, parent, on_click):
-        super(ArticlePanel, self).__init__(parent, 'ArticlePanel', on_click)
+        super(MePanel, self).__init__(parent, "About the Dev", on_click)
+        self.on_click = on_click
+        self.parent_frame = parent
+        self.width, self.height = 704, 421
+
+        self.MainUI()
+
+    def MainUI(self):
+        self.main_panel = scrolledpanel.ScrolledPanel(self, id=-1, size=(self.width, self.height),
+                                                      style=wx.TAB_TRAVERSAL)
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.main_sizer)
+        self.main_sizer.Add(self.main_panel)
+
+        self.panel_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.main_panel.SetSizer(self.panel_sizer)
+
+
+        self.logo = wx.Image(r".\\Resources\\icons\\lib-logo.png")
+        self.logo = self.logo.Rescale(width=301, height=79, quality=wx.IMAGE_QUALITY_NORMAL)
+        self.logo_bitmap = wx.Bitmap(self.logo)
+        self.logo_stat = wx.StaticBitmap(self.main_panel, id=-1, bitmap=self.logo_bitmap, size=(301, 79))
+        self.panel_sizer.Add(self.logo_stat, 0, wx.LEFT|wx.TOP, 25)
+        self.font1 = wx.Font(15, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Calibri')
+        self.font2 = wx.Font(11, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Calibri')
+
+
+        self.dots = "------------------------------------------------------------"
+        self.line = wx.StaticText(self.main_panel, id=-1, label=self.dots)
+        self.line.SetFont(self.font1)
+        self.line.SetLabel(self.dots)
+        self.panel_sizer.Add(self.line, 0, wx.LEFT|wx.TOP, 25)
+
+        self.text = "This application is the devloper\'s first ever interaction with wxpython\n"+ \
+                    "(A python GUI FrameWork), and web scraping library BeautifulSoup 4.\n"+ \
+                    "\n"+ \
+                    "About Z library:\n"+ \
+                    "-------------------------------------\n"+ \
+                    "The footer in the project's pages contains the phrase \"Free ebooks since 2009.\"\n"+ \
+                    "Z-Library is one of the more well known shadow libraries, along with Sci-Hub and\n"+ \
+                    "Library Genesis, with publishers and government organizations usually putting the\n"+ \
+                    "three in the same category when pursuing anti-piracy cases. UK organization The Publishers\n"+ \
+                    "Association has attempted to enact ISP level blocks on Z-Library. In late 2015,\n"+ \
+                    "Publisher Elsevier filed a successful court request that ordered the registrar of\n"+ \
+                    "bookfi.org to seize the site's domain. Bookfi.org, booksc.org and b-ok.org were\n"+ \
+                    "included in the 2017 US government report for Notorious Markets.\n"+ \
+                    "\n"
+
+        self.text1 = "About the Dev:\n"+ \
+                      "--------------------------------------\n"+ \
+                      "Ahsan Aquib Raushan is 20 years old undergraduate currently in India.\n"+ \
+                      "Completing his Diploma in Computer Science from a renowned university Jamia Millia Islamia\n"+ \
+                      "(Batch of 2020), he usually is spending his time during lockdown"+ \
+                      " sharpening his skills in IT.\n"+ \
+                      "You've obviously found him on Github, for connecting with him on other platforms, Look here:\n"
+
+
+        self.text_obj1 = wx.StaticText(self.main_panel, id=-1, label="")
+        self.text_obj1.SetFont(self.font2)
+        self.text_obj1.SetLabel(self.text)
+
+        self.text_obj2 = wx.StaticText(self.main_panel, id=-1, label="")
+        self.text_obj2.SetFont(self.font2)
+        self.text_obj2.SetLabel(self.text1)
+
+        self.panel_sizer.Add(self.text_obj1, 0, wx.LEFT|wx.TOP, 25)
+        self.panel_sizer.Add(self.text_obj2, 0, wx.LEFT|wx.TOP, 25 )
+
+        self.dev_panel = wx.BoxSizer(wx.HORIZONTAL)
+        self.panel_sizer.Add(self.dev_panel)
+
+        self.insta = wx.Image(r".\\Resources\\icons\\insta.png")
+        self.insta = self.insta.Rescale(width=30, height=30, quality=wx.IMAGE_QUALITY_NORMAL)
+        self.instagram = wx.BitmapButton(self.main_panel, id=-1, bitmap=wx.Bitmap(self.insta), size=(40, 40),
+                                         style=wx.BU_NOTEXT)
+        self.instagram.Bind(wx.EVT_BUTTON, self.on_insta)
+
+
+        self.link = wx.Image(r".\\Resources\\icons\\link.png")
+        self.link = self.link.Rescale(width=24, height=24, quality=wx.IMAGE_QUALITY_NORMAL)
+        self.linkedin = wx.BitmapButton(self.main_panel, id=-1, bitmap=wx.Bitmap(self.link), size=(40, 40),
+                                         style=wx.BU_NOTEXT)
+        self.linkedin.Bind(wx.EVT_BUTTON, self.on_linkedin)
+
+        self.dev_panel.Add(self.instagram, 0, wx.LEFT|wx.TOP, 25)
+        self.dev_panel.Add(self.linkedin, 0, wx.LEFT|wx.TOP, 25)
+
+        self.main_panel.SetupScrolling()
+        self.panel_sizer.Layout()
+
+    def on_insta(self, event):
+        webbrowser.open(url="https://www.instagram.com/graciously_olive/", new=2, autoraise=True)
+
+    def on_linkedin(self, event):
+        webbrowser.open(url="https://www.linkedin.com/in/ahsan-aquib-raushan-b5b59118a/", new=2, autoraise=True)
 
 
 class PanelSwitcher(wx.BoxSizer):
+    '''
+    Class extended from BoxSizer to hold all panels
+    '''
     def __init__(self, parent, panels):
         wx.BoxSizer.__init__(self)
         parent.SetSizer(self)
@@ -573,106 +714,112 @@ class PanelSwitcher(wx.BoxSizer):
 
 
 class ShareFrame(wx.Frame):
+    '''
+    Frame displayed as a card to enable sharing
+    '''
     def __init__(self, title, parent=None):
         super(ShareFrame, self).__init__(parent=parent, title=title, style=wx.CAPTION|wx.CLOSE_BOX)
-        self.SetBackgroundColour('#F8EDEB')
+        self.SetBackgroundColour('#DDB892')
         self.SetId(wx.ID_ANY)
-        self.SetSize(250, 400)
-        self.def_image = wx.Image(r".\\Resources\\mominamustehsan.png")
-        self.def_image = self.def_image.Rescale(width=84, height=114, quality=wx.IMAGE_QUALITY_HIGH)
-        self.share_img = wx.Image(r".\\Resources\\icons\\share.png")
-        self.share_img.Rescale(width=20, height=20, quality=wx.IMAGE_QUALITY_NORMAL)
-        self.download_img = wx.Image(r".\\Resources\\icons\\download.png")
-        self.download_img.Rescale(width=20, height=20, quality=wx.IMAGE_QUALITY_NORMAL)
-        self.font1 = wx.Font(12, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Calibri')
-        self.font2 = wx.Font(12, wx.MODERN, wx.BOLD, wx.NORMAL, False, u'Roboto')
+        self.SetSize(400, 320)
+
+        # Resources
+        self.default_image = wx.Image(r".\\Resources\\mominamustehsan.png")
+        self.default_image = self.default_image.Rescale(width=111, height=151, quality=wx.IMAGE_QUALITY_HIGH)
+        self.font1 = wx.Font(11, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Calibri')
+        self.font2 = wx.Font(12, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Roboto')
+        self.font2.MakeBold()
         self.MainUI()
-        self.Show()
 
 
     def MainUI(self):
+
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_sizer)
 
-        self.top_panel = wx.Panel(self, id=-1, size=(250, 70), pos=(0, 0), style=wx.NO_BORDER)
-        self.top_panel.SetBackgroundColour('#F8EDEB')
-        self.middle_panel = wx.Panel(self, id=-1, size=(250, 145), pos=(0, 70), style=wx.SIMPLE_BORDER)
-        self.middle_panel.SetBackgroundColour('#F8EDEB')
-        self.bottom_panel = wx.Panel(self, id=-1, size=(250, 185), pos=(0, 215), style= wx.NO_BORDER)
-        self.bottom_panel.SetBackgroundColour('#F8EDEB')
+        self.top_panel = wx.Panel(self, id=-1, size=(400, 53), pos=(0, 0), style=wx.NO_BORDER)
+        self.top_panel.SetBackgroundColour('#DDB892')
+        self.top_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.top_panel.SetSizer(self.top_sizer)
+        self.middle_panel = wx.Panel(self, id=-1, size=(400, 170), pos=(0, 53), style=wx.NO_BORDER)
+        self.middle_panel.SetBackgroundColour('#DDB892')
+        self.middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.middle_panel.SetSizer(self.middle_sizer)
+        self.lower_panel = wx.Panel(self, id=-1, size=(400, 56), pos=(0, 223), style=wx.NO_BORDER)
+        self.lower_panel.SetBackgroundColour('#DDB892')
+        self.lower_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.lower_panel.SetSizer(self.lower_sizer)
+
 
         self.main_sizer.Add(self.top_panel)
         self.main_sizer.Add(self.middle_panel)
-        self.main_sizer.Add(self.bottom_panel, 0, wx.LEFT|wx.TOP, 5)
+        self.main_sizer.Add(self.lower_panel)
 
-        self.top_main_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.top_panel.SetSizer(self.top_main_sizer)
-        self.middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.middle_panel.SetSizer(self.middle_sizer)
-        self.bottom_sizer = wx.GridSizer(rows=7, cols=1, hgap=5, vgap=5)
-        self.bottom_panel.SetSizer(self.bottom_sizer)
-
-        # top panel
-        self.book_name = wx.StaticText(self.top_panel, id=-1, label="--Book Name--",
-                                       style=wx.ST_ELLIPSIZE_MIDDLE)
+        # top panel element
+        self.book_name = wx.StaticText(self.top_panel, id=-1, label="--Book Name--", style=wx.ST_ELLIPSIZE_END)
         self.book_name.SetFont(self.font2)
-        self.top_main_sizer.Add(self.book_name, 0, flag=wx.TOP|wx.LEFT, border=20)
+        self.top_sizer.Add(self.book_name, 0, flag=wx.TOP|wx.LEFT, border=20)
 
-        # middle panel
-        self.Book_bitmap = wx.BitmapButton(self.middle_panel, id=-1, size=(84, 114), bitmap=wx.Bitmap(self.def_image),
+        # middle panel elements
+        self.book_bitmap = wx.BitmapButton(self.middle_panel, id=-1, size=(111, 151),
+                                           bitmap=wx.Bitmap(self.default_image),
                                            style=wx.BU_NOTEXT)
-        self.middle_sizer.Add(self.Book_bitmap, 0, flag=wx.LEFT | wx.TOP, border=20)
+        self.middle_sizer.Add(self.book_bitmap, 0, flag=wx.LEFT | wx.TOP, border=10)
+        self.detail_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.screenshot = wx.BitmapButton(self.middle_panel, id=-1, size=(40, 40), style=wx.BU_LEFT)
-        self.screenshot.Bind(wx.EVT_BUTTON, self.on_share)
-        self.screenshot.SetLabel("Share")
-        self.screenshot.SetBitmap(wx.Bitmap(self.share_img))
+        self.middle_sizer.Add(self.detail_sizer, 0, wx.LEFT, 15)
 
-        self.download = wx.BitmapButton(self.middle_panel, id=-1, size=(40, 40), style=wx.BU_LEFT)
-        self.download.SetLabel("download")
-        self.download.SetBitmap(wx.Bitmap(self.download_img))
-
-
-        self.middle_1_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.middle_sizer.Add(self.middle_1_sizer)
-
-        self.middle_1_sizer.Add(self.screenshot, 0, flag=wx.TOP | wx.LEFT, border=25)
-        self.middle_1_sizer.Add(self.download, 0, flag=wx.TOP | wx.LEFT, border=25)
-
-        self.author = wx.StaticText(self.bottom_panel, id=-1, label="Author: --")
+        # detail sizer elements
+        self.author = wx.StaticText(self.middle_panel, id=-1, label="Author: --")
         self.author.SetFont(self.font1)
-        self.isbn = wx.StaticText(self.bottom_panel, id=-1, label="ISBN: --")
+        self.isbn = wx.StaticText(self.middle_panel, id=-1, label="ISBN: --")
         self.isbn.SetFont(self.font1)
-        self.isbn_10 = wx.StaticText(self.bottom_panel, id=-1, label="ISBN 10: --")
+        self.isbn_10 = wx.StaticText(self.middle_panel, id=-1, label="ISBN 10: --")
         self.isbn_10.SetFont(self.font1)
-        self.isbn_13 = wx.StaticText(self.bottom_panel, id=-1, label="ISBN 13: --")
+        self.isbn_13 = wx.StaticText(self.middle_panel, id=-1, label="ISBN 13: --")
         self.isbn_13.SetFont(self.font1)
-        self.year = wx.StaticText(self.bottom_panel, id=-1, label="Year: --")
+        self.year = wx.StaticText(self.middle_panel, id=-1, label="Year: --")
         self.year.SetFont(self.font1)
-        self.file = wx.StaticText(self.bottom_panel, id=-1, label="File Type: --")
+        self.file = wx.StaticText(self.middle_panel, id=-1, label="File Type: --")
         self.file.SetFont(self.font1)
 
-        self.bottom_sizer.Add(self.author)
-        self.bottom_sizer.Add(self.isbn)
-        self.bottom_sizer.Add(self.isbn_10)
-        self.bottom_sizer.Add(self.isbn_13)
-        self.bottom_sizer.Add(self.year)
-        self.bottom_sizer.Add(self.file)
+        self.detail_sizer.Add(self.author, 0, flag=wx.LEFT|wx.TOP, border=5)
+        self.detail_sizer.Add(self.isbn, 0, flag=wx.LEFT|wx.TOP, border=5)
+        self.detail_sizer.Add(self.isbn_10, 0, flag=wx.LEFT|wx.TOP, border=5)
+        self.detail_sizer.Add(self.isbn_13, 0, flag=wx.LEFT|wx.TOP, border=5)
+        self.detail_sizer.Add(self.year, 0, flag=wx.LEFT|wx.TOP, border=5)
+        self.detail_sizer.Add(self.file, 0, flag=wx.LEFT|wx.TOP, border=5)
 
-        self.scrape_detail("https://1lib.in/book/4971360/71472b?dsource=recommend")
+        # bottom sizer elements
+        self.share_icon = wx.Image(r".\\Resources\\icons\\share.png")
+        self.share_icon.Rescale(width=29, height=29, quality=wx.IMAGE_QUALITY_NORMAL)
+        self.button1 = wx.BitmapButton(self.lower_panel, id=-1, size=(35, 35), bitmap=wx.Bitmap(self.share_icon),
+                                       style=wx.BU_NOTEXT)
+        self.button1.SetToolTip(wx.ToolTip("Share as Screenshot"))
+        self.button1.Bind(wx.EVT_BUTTON, self.on_share)
+
+        self.download_icon = wx.Image(r".\\Resources\icons\\download.png")
+        self.download_icon.Rescale(width=29, height=29, quality=wx.IMAGE_QUALITY_NORMAL)
+        self.button2 = wx.BitmapButton(self.lower_panel, id=-1, size=(35, 35), bitmap=wx.Bitmap(self.download_icon),
+                                       style=wx.BU_NOTEXT)
+        self.button2.SetToolTip(wx.ToolTip("Download from site"))
+        self.button2.Bind(wx.EVT_BUTTON, self.on_down)
+
+        self.lower_sizer.Add(self.button1, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 24)
+        self.lower_sizer.Add(self.button2, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 24)
 
     def on_share(self, event):
-        self.Centre()
-
-        hwnd = win32gui.FindWindow(None, "My Share Snorkeling")
+        hwnd = win32gui.FindWindow(None, "Book Details--")
 
         print(win32gui.GetWindowRect(hwnd))
 
         left, top, right, bottom = win32gui.GetWindowRect(hwnd)
 
-        self.image = pyscreenshot.grab(bbox=(left, top, right, bottom))
+        self.image = pyscreenshot.grab(bbox=(left+7, top, right-7, bottom-7))
         self.image.save("screenshot.png")
 
+    def on_down(self, event):
+        webbrowser.open(url=self.url_passed, new=2, autoraise=True)
 
 
     def scrape_detail(self, arg):
@@ -692,7 +839,8 @@ class ShareFrame(wx.Frame):
 
         try:
             self.b_name = self.page_var.h1.get_text().strip()
-            self.book_name.SetLabel(self.b_name)
+            self.book_name.SetLabel(self.b_name[:34]+ "...")
+            self.book_name.SetToolTip(wx.ToolTip(self.b_name))
         except AttributeError:
             pass
 
@@ -738,32 +886,32 @@ class ShareFrame(wx.Frame):
 
         self.b_map = io.BytesIO(
             urlopen(Request(self.page_analytic.find('div', {'class': "col-sm-3"}).a.img['src'])).read())
-        self.b_buffer = wx.Image(self.b_map).Rescale(width=84, height=114, quality=wx.IMAGE_QUALITY_NORMAL)
+        self.b_buffer = wx.Image(self.b_map).Rescale(width=111, height=151, quality=wx.IMAGE_QUALITY_NORMAL)
 
-        self.Book_bitmap.SetBitmap(wx.Bitmap(self.b_buffer))
+        self.book_bitmap.SetBitmap(wx.Bitmap(self.b_buffer))
 
         self.top_panel.Update()
         self.middle_panel.Update()
-        self.bottom_panel.Update()
+        self.lower_panel.Update()
 
 
 class WindowFrame(wx.Frame):
+    '''
+    Main frame for all panels
+    '''
     def __init__(self, parent=None):
         super(WindowFrame, self).__init__(parent, title='Z-library', style=wx.DEFAULT_FRAME_STYLE)
         self.SetSize((720, 480))
         self.Centre(direction=wx.BOTH)
-        self.SetIcon(wx.Icon(r'.\\Resources\\Icons\\temperature.png'))
+        self.SetIcon(wx.Icon(r'.\\Resources\\Icons\\Logo.png'))
 
         self.main_panel = MainPanel(self, self.on_main_panel_click)
-        self.logo_panel = LogoPanel(self, self.on_logo_panel_click)
         self.d1_panel = DetailPanel1(self, self.on_d1_panel_click)
         self.d2_panel = DetailPanel2(self, self.on_d2_panel_click)
-        self.article_panel = ArticlePanel(self, self.article_on_click)
-        
-        self.panel_switch = PanelSwitcher(self, [self.main_panel, self.logo_panel,
-                                                 self.d1_panel,self.d2_panel, self.article_panel])
+        self.me_panel = MePanel(self, self.on_me_click)
 
-        self.obj = ShareFrame("My Share Snorkeling", self)
+        self.panel_switch = PanelSwitcher(self, [self.main_panel,
+                                                 self.d1_panel,self.d2_panel, self.me_panel])
 
         self.Menu_ui()
 
@@ -771,22 +919,14 @@ class WindowFrame(wx.Frame):
     def Menu_ui(self):
         self.menubar = wx.MenuBar(style=wx.MB_DOCKABLE)
         self.setting = wx.Menu()
-        self.books_menu = wx.MenuItem(self.setting, id=-1, text="Books", kind=wx.ITEM_RADIO)
-        self.article_menu = wx.MenuItem(self.setting, id=-1, text="Articles", kind=wx.ITEM_RADIO)
-        self.setting.Append(self.books_menu)
-        self.setting.Append(self.article_menu)
         self.setting.AppendSeparator()
-        self.dark_theme = wx.MenuItem(self.setting, id=-1, text="Dark", kind=wx.ITEM_RADIO)
-        self.light_theme = wx.MenuItem(self.setting, id=-1, text="Light", kind=wx.ITEM_RADIO)
-        self.setting.Append(self.light_theme)
-        self.setting.Append(self.dark_theme)
-        self.setting.AppendSeparator()
-        self.about_me = wx.MenuItem(self.setting, id=-1, text="About Me", kind=wx.ITEM_NORMAL)
+        self.about_me = wx.MenuItem(self.setting, id=-1, text="About", kind=wx.ITEM_NORMAL)
         self.quit = wx.MenuItem(self.setting, id=-1, text="Quit", kind=wx.ITEM_NORMAL)
         self.setting.Append(self.about_me)
         self.setting.Append(self.quit)
         self.menubar.Append(self.setting, "Settings")
         self.SetMenuBar(self.menubar)
+        self.Bind(wx.EVT_MENU, self.on_me_click, self.about_me)
 
     def on_main_panel_click(self, event):
         arg = event.GetEventObject().GetLabel()
@@ -802,23 +942,22 @@ class WindowFrame(wx.Frame):
             self.panel_switch.Hide(self.d1_panel)
             self.d2_panel.list_scrape(arg)
             self.panel_switch.Show(self.d2_panel)
-    
-    def on_logo_panel_click(self):
-        pass
-    
+
     def on_d1_panel_click(self, event):
         if "mostpopular" in event.GetEventObject().GetLabel():
             self.panel_switch.Hide(self.d1_panel)
             self.d1_panel.scrape_detail(event.GetEventObject().GetLabel())
             self.panel_switch.Show(self.d1_panel)
-        else:
-            pass
-    
+
     def on_d2_panel_click(self, event):
         self.args = event.GetEventObject().GetLabel()
+        self.obj = ShareFrame("Book Details--", self)
         self.obj.scrape_detail(self.args)
         self.obj.Show()
 
+    def on_me_click(self, event):
+        self.panel_switch.Hide(self.main_panel)
+        self.panel_switch.Show(self.me_panel)
 
 
 # Press the green button in the gutter to run the script.
@@ -828,4 +967,3 @@ if __name__ == '__main__':
     frame_obj = WindowFrame()
     frame_obj.Show()
     app_obj.MainLoop()
-
