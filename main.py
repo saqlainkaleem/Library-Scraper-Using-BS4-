@@ -373,10 +373,16 @@ class DetailPanel1(PanelBase):
         i = 0
 
         for container in self.containers:
+            print(i)
             self.url_param = container.a['href']
-            self.buffer = wx.Image(io.BytesIO(urlopen(Request(container.a.img['src'])).read()))
-            self.buffer = self.buffer.Rescale(width=120, height=int((2 * self.height) / 5),
-                                              quality=wx.IMAGE_QUALITY_HIGH)
+
+            try:
+                self.buffer = wx.Image (io.BytesIO(urlopen(Request(container.a.img['src'])).read()))
+                self.buffer = self.buffer.Rescale(width=120, height=int ((2 * self.height) / 5),
+                                               quality=wx.IMAGE_QUALITY_HIGH)
+            except TypeError:
+                self.buffer = self.def_image
+
             self.button_spec_1[i] = wx.BitmapButton(self.index_panel, id=-1, size=(120, int((2 * self.height) / 5)),
                                                     bitmap=wx.Bitmap(self.buffer), style=wx.BU_NOTEXT)
             self.button_spec_1[i].SetLabel("https://1lib.in"+ self.url_param)
@@ -921,17 +927,24 @@ class WindowFrame(wx.Frame):
         self.setting = wx.Menu()
         self.setting.AppendSeparator()
         self.about_me = wx.MenuItem(self.setting, id=-1, text="About", kind=wx.ITEM_NORMAL)
+        self.panel_changer = wx.MenuItem(self.setting, id=-1, text="Back", kind=wx.ITEM_NORMAL)
         self.quit = wx.MenuItem(self.setting, id=-1, text="Quit", kind=wx.ITEM_NORMAL)
         self.setting.Append(self.about_me)
+        self.setting.Append(self.panel_changer)
         self.setting.Append(self.quit)
         self.menubar.Append(self.setting, "Settings")
         self.SetMenuBar(self.menubar)
         self.Bind(wx.EVT_MENU, self.on_me_click, self.about_me)
+        self.Bind(wx.EVT_MENU, self.on_switch, self.panel_changer)
+
+        self.temp = None
+
 
     def on_main_panel_click(self, event):
         arg = event.GetEventObject().GetLabel()
         if "mostpopular" in arg:
             self.panel_switch.Hide(self.main_panel)
+            self.temp = self.main_panel
             self.panel_switch.Show(self.d1_panel)
             self.d1_panel.scrape_detail(arg)
         else:
@@ -940,12 +953,14 @@ class WindowFrame(wx.Frame):
             arg = "https://1lib.in/s/" + arg
             print("Url_accessing: " + arg)
             self.panel_switch.Hide(self.d1_panel)
+            self.temp = self.main_panel
             self.d2_panel.list_scrape(arg)
             self.panel_switch.Show(self.d2_panel)
 
     def on_d1_panel_click(self, event):
         if "mostpopular" in event.GetEventObject().GetLabel():
             self.panel_switch.Hide(self.d1_panel)
+            self.temp = self.d1_panel
             self.d1_panel.scrape_detail(event.GetEventObject().GetLabel())
             self.panel_switch.Show(self.d1_panel)
 
@@ -957,7 +972,12 @@ class WindowFrame(wx.Frame):
 
     def on_me_click(self, event):
         self.panel_switch.Hide(self.main_panel)
+        self.temp = self.main_panel
         self.panel_switch.Show(self.me_panel)
+
+    def on_switch(self, event):
+        print("I am here")
+        self.panel_switch.Show(self.temp)
 
 
 # Press the green button in the gutter to run the script.
